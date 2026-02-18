@@ -149,6 +149,13 @@ try:
 except Exception as e:
     print(f"⚠️  Erro ao migrar colunas autor em historico_status: {e}")
 
+# Adicionar foreign key constraint para usuario_id em historico_status
+try:
+    from ti.scripts.add_fk_usuario_id import add_fk_usuario_id
+    add_fk_usuario_id()
+except Exception as e:
+    print(f"⚠️  Erro ao adicionar FK de usuario_id em historico_status: {e}")
+
 # Criar tabela de configurações de notificações na inicialização
 try:
     from ti.scripts.setup_notification_settings import create_notification_settings_table

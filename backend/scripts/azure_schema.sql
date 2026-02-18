@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS `historico_status` (
   `data_fim` DATETIME NULL,
   `usuario_id` INT NULL,
   `descricao` TEXT NULL,
+  `autor_email` VARCHAR(200) NULL,
+  `autor_nome` VARCHAR(300) NULL,
   `created_at` DATETIME NULL,
   `updated_at` DATETIME NULL,
   PRIMARY KEY (`id`),
@@ -127,7 +129,7 @@ CREATE TABLE IF NOT EXISTS `historico_status` (
   KEY `usuario_id` (`usuario_id`),
   KEY `status` (`status`),
   CONSTRAINT `historico_status_ibfk_1` FOREIGN KEY (`chamado_id`) REFERENCES `chamado` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `historico_status_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `user` (`id`)
+  CONSTRAINT `historico_status_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela: historico_ticket

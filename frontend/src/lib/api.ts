@@ -13,7 +13,26 @@ export const API_BASE: string = (() => {
 export function apiFetch(path: string, init?: RequestInit) {
   const p = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_BASE}${p}`;
-  return fetch(url, init);
+
+  // Get session token from sessionStorage (stored in Azure database)
+  const sessionToken = sessionStorage.getItem("auth_session_token");
+
+  // Prepare headers
+  const headers = new Headers(init?.headers || {});
+
+  // Add authorization header with session token if available
+  // Session token is validated against Azure database, more secure than JWT
+  if (sessionToken) {
+    headers.set("X-Session-Token", sessionToken);
+  }
+
+  // Merge with existing init object
+  const finalInit: RequestInit = {
+    ...init,
+    headers,
+  };
+
+  return fetch(url, finalInit);
 }
 
 interface ApiResponse<T> {

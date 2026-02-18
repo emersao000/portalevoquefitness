@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from core.db import get_db, engine
@@ -27,6 +27,62 @@ from fastapi.responses import Response
 from sqlalchemy import insert
 import json
 from datetime import datetime, timedelta
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def get_current_user_from_request(request: Request, db: Session) -> User | None:
+    """
+    Extrai o usuário da sessão armazenada no Azure.
+    Primeiro tenta usar o X-Session-Token (armazenado em Azure),
+    depois tenta JWT como fallback.
+    Retorna o objeto User se validado com sucesso.
+    """
+    try:
+        # Primeiro, tenta usar session token (mais seguro, armazenado em Azure)
+        session_token = request.headers.get("X-Session-Token")
+        if session_token:
+            try:
+                from ti.models.session import Session as SessionModel  # type: ignore
+                session = db.query(SessionModel).filter(
+                    (SessionModel.session_token == session_token) &
+                    (SessionModel.is_active == True)
+                ).first()
+
+                if session and not session.is_expired():
+                    user = db.query(User).filter(User.id == session.user_id).first()
+                    if user:
+                        print(f"[AUTH] ✅ Usuário validado via Azure session: {user.email}")
+                        return user
+            except Exception as e:
+                print(f"[AUTH] ⚠️  Erro ao validar session token: {e}")
+
+        # Fallback: tenta JWT token
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "").strip()
+            if token:
+                try:
+                    from auth0.validator import verify_auth0_token
+                    user_data = verify_auth0_token(token)
+                    if user_data and user_data.get("email"):
+                        # Tenta encontrar o usuário pelo email
+                        from sqlalchemy import func as sa_func
+                        user = db.query(User).filter(
+                            sa_func.lower(User.email) == user_data.get("email").lower()
+                        ).first()
+                        if user:
+                            print(f"[AUTH] ✅ Usuário validado via JWT token: {user.email}")
+                            return user
+                except Exception as e:
+                    print(f"[AUTH] ⚠️  Erro ao validar JWT token: {e}")
+
+        print(f"[AUTH] ⚠️  Nenhum token de autenticação válido encontrado")
+        return None
+    except Exception as e:
+        print(f"[AUTH] ❌ Erro ao extrair usuário da requisição: {e}")
+        return None
 
 # ============================================================================
 # CACHE MANAGER INLINED - Chamados de hoje com reset à meia-noite
@@ -884,6 +940,7 @@ def enviar_ticket(
     destinatarios: str = Form(...),
     autor_email: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
+    request: Request,
     db: Session = Depends(get_db),
 ):
     try:
@@ -897,6 +954,14 @@ def enviar_ticket(
         # garantir tabelas necessárias para anexos de ticket
         TicketAnexo.__table__.create(bind=engine, checkfirst=True)
         _ensure_column("ticket_anexos", "conteudo", "MEDIUMBLOB NULL")
+
+        # Se não foi fornecido author_email no formulário, tenta extrair da sessão Azure ou JWT
+        if not autor_email:
+            current_user = get_current_user_from_request(request, db)
+            if current_user:
+                autor_email = current_user.email
+                print(f"[TICKET] 📧 Usando usuário da sessão Azure para ticket: {autor_email}")
+
         user_id = None
         if autor_email:
             try:
@@ -1112,11 +1177,15 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
                                 nome_display = f"{u2.nome} {u2.sobrenome}".strip()
                                 email_display = u2.email
                             else:
+                                # Sem nome, mas temos email — usa email como nome
                                 nome_display = autor_email_extra
                                 email_display = autor_email_extra
                         except Exception:
                             nome_display = autor_email_extra
                             email_display = autor_email_extra
+                    else:
+                        # Sem email nem nome — tenta extrair de Notification ou database logs
+                        print(f"[HISTORICO] ⚠️  Registro {r.id} sem usuario_id, autor_email, ou autor_nome")
 
                 # Monta label legível a partir da descricao
                 label_text = r.descricao or f"Status: {r.status}"
@@ -1142,16 +1211,27 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
                 for n in notas:
                     if n.acao == "status":
                         usuario = None
+                        nome_fallback = None
+                        email_fallback = None
                         if n.usuario_id:
                             usuario = db.query(User).filter(User.id == n.usuario_id).first()
+                            if usuario:
+                                nome_fallback = f"{usuario.nome} {usuario.sobrenome}".strip()
+                                email_fallback = usuario.email
+
+                        # Se não achou usuário por ID, tenta extrair email da mensagem
+                        if not nome_fallback and n.mensagem:
+                            # Tenta extrair email da mensagem (se houver)
+                            nome_fallback = n.mensagem or "Usuário do sistema"
+
                         items.append(HistoricoItem(
                             t=n.criado_em or now_brazil_naive(),
                             tipo="status",
                             label=n.mensagem or "Status atualizado",
                             anexos=None,
                             usuario_id=n.usuario_id,
-                            usuario_nome=f"{usuario.nome} {usuario.sobrenome}".strip() if usuario else None,
-                            usuario_email=usuario.email if usuario else None,
+                            usuario_nome=nome_fallback,
+                            usuario_email=email_fallback,
                         ))
         except Exception as e:
             import traceback
@@ -1204,7 +1284,7 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{chamado_id}/status", response_model=ChamadoOut)
-def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session = Depends(get_db)):
+def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, request: Request, db: Session = Depends(get_db)):
     try:
         novo = _normalize_status(payload.status)
         if novo not in ALLOWED_STATUSES:
@@ -1226,6 +1306,15 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
         autor_nome_str = None
         autor_email_str = (payload.autor_email or "").strip() or None
 
+        # Se não foi fornecido author_email no payload, tenta extrair da sessão Azure ou JWT
+        if not autor_email_str:
+            current_user = get_current_user_from_request(request, db)
+            if current_user:
+                autor_usuario_id = current_user.id
+                autor_email_str = current_user.email
+                autor_nome_str = f"{current_user.nome} {current_user.sobrenome}".strip()
+                print(f"[HISTORICO STATUS] 📧 Usando usuário da sessão Azure: {autor_email_str} ({autor_nome_str})")
+
         if autor_email_str:
             try:
                 # MySQL é case-insensitive por padrão para utf8mb4_unicode_ci,
@@ -1239,9 +1328,13 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
                     autor_nome_str = f"{autor.nome} {autor.sobrenome}".strip()
                     print(f"[HISTORICO STATUS] ✅ Autor identificado: {autor_nome_str} (id={autor_usuario_id})")
                 else:
-                    print(f"[HISTORICO STATUS] ⚠️  Email '{autor_email_str}' não encontrado na tabela User — nome não será exibido")
+                    # Se o usuário não foi encontrado, mas temos email, usa ele como fallback
+                    autor_nome_str = None  # Será preenchido apenas se encontrarmos o usuário
+                    print(f"[HISTORICO STATUS] ⚠️  Email '{autor_email_str}' não encontrado na tabela User, mas será armazenado no histórico")
             except Exception as e:
                 print(f"[HISTORICO STATUS] ⚠️  Erro ao buscar autor: {e}")
+        else:
+            print(f"[HISTORICO STATUS] ⚠️  Nenhum autor_email fornecido no payload")
 
         db.add(ch)
         db.commit()  # garante persistência do status antes dos logs
