@@ -1112,11 +1112,15 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
                                 nome_display = f"{u2.nome} {u2.sobrenome}".strip()
                                 email_display = u2.email
                             else:
+                                # Sem nome, mas temos email — usa email como nome
                                 nome_display = autor_email_extra
                                 email_display = autor_email_extra
                         except Exception:
                             nome_display = autor_email_extra
                             email_display = autor_email_extra
+                    else:
+                        # Sem email nem nome — tenta extrair de Notification ou database logs
+                        print(f"[HISTORICO] ⚠️  Registro {r.id} sem usuario_id, autor_email, ou autor_nome")
 
                 # Monta label legível a partir da descricao
                 label_text = r.descricao or f"Status: {r.status}"
@@ -1142,16 +1146,27 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
                 for n in notas:
                     if n.acao == "status":
                         usuario = None
+                        nome_fallback = None
+                        email_fallback = None
                         if n.usuario_id:
                             usuario = db.query(User).filter(User.id == n.usuario_id).first()
+                            if usuario:
+                                nome_fallback = f"{usuario.nome} {usuario.sobrenome}".strip()
+                                email_fallback = usuario.email
+
+                        # Se não achou usuário por ID, tenta extrair email da mensagem
+                        if not nome_fallback and n.mensagem:
+                            # Tenta extrair email da mensagem (se houver)
+                            nome_fallback = n.mensagem or "Usuário do sistema"
+
                         items.append(HistoricoItem(
                             t=n.criado_em or now_brazil_naive(),
                             tipo="status",
                             label=n.mensagem or "Status atualizado",
                             anexos=None,
                             usuario_id=n.usuario_id,
-                            usuario_nome=f"{usuario.nome} {usuario.sobrenome}".strip() if usuario else None,
-                            usuario_email=usuario.email if usuario else None,
+                            usuario_nome=nome_fallback,
+                            usuario_email=email_fallback,
                         ))
         except Exception as e:
             import traceback
@@ -1239,9 +1254,13 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
                     autor_nome_str = f"{autor.nome} {autor.sobrenome}".strip()
                     print(f"[HISTORICO STATUS] ✅ Autor identificado: {autor_nome_str} (id={autor_usuario_id})")
                 else:
-                    print(f"[HISTORICO STATUS] ⚠️  Email '{autor_email_str}' não encontrado na tabela User — nome não será exibido")
+                    # Se o usuário não foi encontrado, mas temos email, usa ele como fallback
+                    autor_nome_str = None  # Será preenchido apenas se encontrarmos o usuário
+                    print(f"[HISTORICO STATUS] ⚠️  Email '{autor_email_str}' não encontrado na tabela User, mas será armazenado no histórico")
             except Exception as e:
                 print(f"[HISTORICO STATUS] ⚠️  Erro ao buscar autor: {e}")
+        else:
+            print(f"[HISTORICO STATUS] ⚠️  Nenhum autor_email fornecido no payload")
 
         db.add(ch)
         db.commit()  # garante persistência do status antes dos logs
