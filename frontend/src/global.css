@@ -1,0 +1,892 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    /* Evoque Fitness brand: black + orange */
+    --background: 210 22% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 210 16% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 210 16% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 24 94% 50%;
+    /* orange */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 12% 16%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 12% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 210 12% 16%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 12% 22%;
+    --input: 210 12% 22%;
+    --ring: 24 94% 50%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar tokens aligned to brand */
+    --sidebar-background: 210 22% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 24 94% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 12% 16%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 210 12% 22%;
+    --sidebar-ring: 24 94% 50%;
+
+    /* Brand gradient helpers */
+    --brand-start: 24 95% 54%;
+    --brand-end: 16 100% 45%;
+  }
+
+  .dark {
+    /* Keep dark equal to root for a consistent black-first experience */
+    --background: 210 22% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 210 16% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 210 16% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 24 94% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 12% 16%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 12% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 210 12% 16%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 12% 22%;
+    --input: 210 12% 22%;
+    --ring: 24 94% 50%;
+
+    --sidebar-background: 210 22% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 24 94% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 12% 16%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 210 12% 22%;
+    --sidebar-ring: 24 94% 50%;
+
+    --brand-start: 24 95% 54%;
+    --brand-end: 16 100% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-[100svh] w-full;
+  }
+
+  @screen md {
+    body {
+      @apply min-h-screen;
+    }
+  }
+}
+
+@layer components {
+  .brand-gradient {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--brand-start)) 0%,
+      hsl(var(--brand-end)) 100%
+    );
+  }
+
+  .card-surface {
+    @apply bg-card text-card-foreground border border-border/60 shadow-sm;
+  }
+
+  .sidebar-nav {
+    @apply space-y-6;
+  }
+
+  .sidebar-group {
+    @apply space-y-2;
+  }
+
+  .sidebar-group-title {
+    @apply px-3 text-[11px] uppercase tracking-wide text-muted-foreground/80;
+  }
+
+  .sidebar-link {
+    @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm bg-secondary/60 hover:bg-secondary/80 transition;
+  }
+
+  .sidebar-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0.35rem;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--brand-start)) 0%,
+      hsl(var(--brand-end)) 100%
+    );
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .sidebar-link.active {
+    @apply text-foreground shadow-sm;
+    outline: 1px solid hsl(var(--brand-start) / 0.35);
+    background-image: linear-gradient(
+      0deg,
+      hsl(0 0% 100% / 0.02),
+      hsl(0 0% 100% / 0.02)
+    );
+  }
+
+  .sidebar-link.active::before {
+    opacity: 1;
+  }
+
+  .metric-card {
+    @apply rounded-xl p-4 shadow-md text-white border-0;
+  }
+
+  .metric-card[data-variant="orange"] {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--brand-start)) 0%,
+      hsl(var(--brand-end)) 100%
+    );
+  }
+
+  .metric-card[data-variant="green"] {
+    background-image: linear-gradient(
+      135deg,
+      hsl(142 70% 45%) 0%,
+      hsl(150 70% 35%) 100%
+    );
+  }
+
+  .metric-card[data-variant="blue"] {
+    background-image: linear-gradient(
+      135deg,
+      hsl(200 95% 55%) 0%,
+      hsl(210 95% 45%) 100%
+    );
+  }
+
+  .metric-card[data-variant="purple"] {
+    background-image: linear-gradient(
+      135deg,
+      hsl(270 75% 60%) 0%,
+      hsl(290 70% 50%) 100%
+    );
+  }
+
+  /* Login unified backdrop and media tweaks */
+  .login-backdrop {
+    background-image: linear-gradient(
+      90deg,
+      rgba(var(--brand-start), 0.06),
+      rgba(var(--brand-end), 0.06)
+    );
+    backdrop-filter: blur(6px);
+  }
+
+  .login-media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Embla carousel sizing */
+  .embla {
+    height: 100%;
+  }
+
+  .embla__container {
+    height: 100%;
+    display: flex;
+  }
+
+  .embla__slide {
+    height: 100%;
+    flex: 0 0 100%;
+    position: relative;
+  }
+
+  .embla__slide img,
+  .embla__slide video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+
+  /* ===== BI PORTAL - LAYOUT OTIMIZADO ===== */
+
+  /* Root container da página BI */
+  .bi-page-root {
+    display: flex;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    background: #f8fafc;
+  }
+
+  /* ===== SIDEBAR RENOVADA - VISUAL PREMIUM ===== */
+  .bi-sidebar {
+    width: 280px;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 10, 12, 0.98) 0%,
+      rgba(18, 18, 22, 0.99) 50%,
+      rgba(12, 12, 15, 1) 100%
+    );
+    border-right: 1px solid rgba(249, 115, 22, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    z-index: 30;
+    position: relative;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Brilho sutil laranja no topo */
+  .bi-sidebar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: radial-gradient(
+      ellipse at top,
+      rgba(249, 115, 22, 0.08) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bi-sidebar-header {
+    padding: 20px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .bi-logo {
+    height: 36px;
+    width: auto;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .bi-sidebar-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+  }
+
+  /* Navegação com espaçamento refinado */
+  .bi-nav {
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Item do menu - DESIGN PREMIUM */
+  .bi-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.02);
+    text-align: left;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.9rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    letter-spacing: -0.01em;
+  }
+
+  /* Efeito de brilho ao passar o mouse */
+  .bi-item::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(249, 115, 22, 0.1) 50%,
+      transparent 100%
+    );
+    transition: left 500ms ease;
+  }
+
+  .bi-item:hover::after {
+    left: 100%;
+  }
+
+  /* Barra lateral laranja - mais suave */
+  .bi-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 0%;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(180deg, hsl(24 94% 60%), hsl(16 100% 50 ()));
+    transition: height 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+    opacity: 0;
+  }
+
+  .bi-item:hover::before {
+    height: 70%;
+    opacity: 0.6;
+  }
+
+  .bi-item.active::before {
+    height: 85%;
+    opacity: 1;
+  }
+
+  /* Hover state - elegante */
+  .bi-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(249, 115, 22, 0.2);
+    color: #ffffff;
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Active state - DESTAQUE LARANJA */
+  .bi-item.active {
+    background: linear-gradient(
+      135deg,
+      rgba(249, 115, 22, 0.15) 0%,
+      rgba(234, 88, 12, 0.1) 100%
+    );
+    border-color: rgba(249, 115, 22, 0.4);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow:
+      0 4px 20px rgba(249, 115, 22, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateX(0);
+  }
+
+  /* Ícone do item */
+  .bi-item-icon {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    opacity: 0.9;
+    transition: all 250ms ease;
+  }
+
+  .bi-item:hover .bi-item-icon {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .bi-item.active .bi-item-icon {
+    opacity: 1;
+    color: hsl(24 94% 60%);
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+  }
+
+  /* Label do item - permite quebra de linha */
+  .bi-item-label {
+    flex: 1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.3;
+    display: block;
+    word-break: break-word;
+  }
+
+  /* Área de conteúdo principal - FUNDO BRANCO LIMPO */
+  .bi-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: transparent;
+    border-left: 1px solid #e2e8f0;
+  }
+
+  /* Container externo do viewer - MÁXIMA EFICIÊNCIA DE ESPAÇO */
+  .bi-viewer-outer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+    background: transparent;
+  }
+
+  /* Card que envolve o iframe - TOTALMENTE OTIMIZADO */
+  .bi-embed-card {
+    flex: 1;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: auto;
+  }
+
+  .bi-embed-viewport {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  .bi-embed-inner {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Iframe do Power BI - OCUPA 100% DO ESPAÇO DISPONÍVEL */
+  .bi-embed-iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    display: block;
+    background: white;
+    min-height: 0;
+    flex: 1;
+  }
+
+  /* ===== CORREÇÕES DE VISIBILIDADE DOS BOTÕES ===== */
+
+  /* Garantir que TODOS os botões sejam visíveis */
+  .bi-page-root {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Header sempre visível */
+  .bi-dashboard-header {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    background: white !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    padding: 12px 16px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  /* Botões sempre visíveis e com bom contraste */
+  .bi-fullscreen-button {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: #f97316 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 16px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3) !important;
+    cursor: pointer !important;
+  }
+
+  .bi-fullscreen-button:hover {
+    background: #ea580c !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4) !important;
+  }
+
+  .bi-fullscreen-button:active {
+    transform: translateY(0) !important;
+  }
+
+  /* Estados de fullscreen - HEADER VISÍVEL */
+  :fullscreen .bi-dashboard-header {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    z-index: 9999 !important;
+    padding: 12px 20px !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  :-webkit-full-screen .bi-dashboard-header {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    z-index: 9999 !important;
+    padding: 12px 20px !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Ajuste do conteúdo para compensar o header fixo */
+  :fullscreen .bi-viewer-outer {
+    padding-top: 70px !important;
+    height: calc(100vh - 70px) !important;
+  }
+
+  :-webkit-full-screen .bi-viewer-outer {
+    padding-top: 70px !important;
+    height: calc(100vh - 70px) !important;
+  }
+
+  /* Iframe em fullscreen */
+  :fullscreen .bi-embed-iframe {
+    height: calc(100vh - 70px) !important;
+  }
+
+  :-webkit-full-screen .bi-embed-iframe {
+    height: calc(100vh - 70px) !important;
+  }
+
+  /* Loading overlay visível */
+  .bi-loading-overlay {
+    display: flex !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    z-index: 100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Power BI Authentication Container */
+  .bi-auth-container {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    z-index: 50;
+  }
+
+  .bi-auth-content {
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeIn 300ms ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Specific overrides to keep fullscreen controls usable and not orange */
+  .bi-dashboard-header .bi-control-button {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(26, 32, 44, 1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    box-shadow: none !important;
+    padding: 8px !important;
+    min-width: auto !important;
+  }
+
+  /* Floating close button for fullscreen must be prominent and not overridden */
+  .bi-fullscreen-toggle {
+    position: fixed !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 2147483647 !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 10px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    border: none !important;
+  }
+
+  :fullscreen .bi-fullscreen-toggle,
+  :-webkit-full-screen .bi-fullscreen-toggle {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .bi-content .bi-control-button,
+  .bi-content button.bi-control-button {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(26, 32, 44, 1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    padding: 8px !important;
+    min-width: auto !important;
+    box-shadow: none !important;
+  }
+
+  .bi-content .bi-fullscreen-button,
+  .bi-content .bi-control-button:not(.force-orange) {
+    background: transparent !important;
+  }
+
+  .bi-content {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Estados de fullscreen - REMOVE TUDO QUE ATRAPALHA */
+  :fullscreen .bi-embed-card,
+  :-webkit-full-screen .bi-embed-card {
+    width: 100vw !important;
+    height: calc(100vh - 70px) !important;
+    max-width: 100vw !important;
+    max-height: calc(100vh - 70px) !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+
+  :fullscreen .bi-embed-card *,
+  :-webkit-full-screen .bi-embed-card * {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  :fullscreen .bi-embed-iframe,
+  :-webkit-full-screen .bi-embed-iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  /* Scrollbar customizada - ELEGANTE */
+  .bi-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .bi-sidebar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .bi-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      rgba(249, 115, 22, 0.4),
+      rgba(234, 88, 12, 0.6)
+    );
+    border-radius: 3px;
+    transition: background 200ms ease;
+  }
+
+  .bi-sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(249, 115, 22, 0.6),
+      rgba(234, 88, 12, 0.8)
+    );
+  }
+
+  /* ===== RESPONSIVIDADE ===== */
+
+  /* Tablets */
+  @media (max-width: 1024px) {
+    .bi-sidebar {
+      width: 240px;
+    }
+
+    .bi-nav {
+      padding: 12px 8px;
+    }
+
+    .bi-item {
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      gap: 10px;
+    }
+
+    .bi-fullscreen-button {
+      min-width: 120px !important;
+      padding: 8px 12px !important;
+    }
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .bi-page-root {
+      flex-direction: column;
+    }
+
+    .bi-sidebar {
+      width: 100%;
+      height: auto;
+      max-height: 200px;
+      border-right: none;
+      border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .bi-nav {
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 12px 8px;
+      gap: 8px;
+    }
+
+    .bi-item {
+      flex-shrink: 0;
+      min-width: 160px;
+      padding: 10px 14px;
+    }
+
+    .bi-content {
+      border-left: none;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .bi-fullscreen-button {
+      min-width: auto !important;
+      padding: 6px 10px !important;
+    }
+
+    .bi-fullscreen-button span {
+      display: none !important;
+    }
+  }
+
+  /* Telas grandes */
+  @media (min-width: 1920px) {
+    .bi-sidebar {
+      width: 320px;
+    }
+
+    .bi-nav {
+      padding: 20px 14px;
+      gap: 8px;
+    }
+
+    .bi-item {
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      gap: 16px;
+    }
+
+    .bi-item-icon {
+      width: 22px;
+      height: 22px;
+      font-size: 18px;
+    }
+  }
+}
