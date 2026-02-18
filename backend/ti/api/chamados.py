@@ -1,8 +1,9 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from core.db import get_db, engine
+from auth0.validator import verify_auth0_token
 from ti.schemas.chamado import (
     ChamadoCreate,
     ChamadoOut,
@@ -27,6 +28,31 @@ from fastapi.responses import Response
 from sqlalchemy import insert
 import json
 from datetime import datetime, timedelta
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def get_current_user_from_request(request: Request) -> dict | None:
+    """
+    Extrai o usuário do JWT token no header Authorization se disponível.
+    Retorna None se não houver token ou se a validação falhar.
+    """
+    try:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+
+        token = auth_header.replace("Bearer ", "").strip()
+        if not token:
+            return None
+
+        # Valida o token JWT
+        user_data = verify_auth0_token(token)
+        return user_data
+    except Exception as e:
+        print(f"[AUTH] Erro ao extrair usuário do JWT: {e}")
+        return None
 
 # ============================================================================
 # CACHE MANAGER INLINED - Chamados de hoje com reset à meia-noite
@@ -884,6 +910,7 @@ def enviar_ticket(
     destinatarios: str = Form(...),
     autor_email: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
+    request: Request,
     db: Session = Depends(get_db),
 ):
     try:
@@ -897,6 +924,14 @@ def enviar_ticket(
         # garantir tabelas necessárias para anexos de ticket
         TicketAnexo.__table__.create(bind=engine, checkfirst=True)
         _ensure_column("ticket_anexos", "conteudo", "MEDIUMBLOB NULL")
+
+        # Se não foi fornecido author_email no formulário, tenta extrair do JWT token
+        if not autor_email:
+            current_user = get_current_user_from_request(request)
+            if current_user and current_user.get("email"):
+                autor_email = current_user.get("email")
+                print(f"[TICKET] 📧 Usando email do JWT token para ticket: {autor_email}")
+
         user_id = None
         if autor_email:
             try:
@@ -1219,7 +1254,7 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{chamado_id}/status", response_model=ChamadoOut)
-def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session = Depends(get_db)):
+def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, request: Request, db: Session = Depends(get_db)):
     try:
         novo = _normalize_status(payload.status)
         if novo not in ALLOWED_STATUSES:
@@ -1240,6 +1275,13 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
         autor_usuario_id = None
         autor_nome_str = None
         autor_email_str = (payload.autor_email or "").strip() or None
+
+        # Se não foi fornecido author_email no payload, tenta extrair do JWT token
+        if not autor_email_str:
+            current_user = get_current_user_from_request(request)
+            if current_user and current_user.get("email"):
+                autor_email_str = current_user.get("email")
+                print(f"[HISTORICO STATUS] 📧 Usando email do JWT token: {autor_email_str}")
 
         if autor_email_str:
             try:

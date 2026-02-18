@@ -13,7 +13,25 @@ export const API_BASE: string = (() => {
 export function apiFetch(path: string, init?: RequestInit) {
   const p = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_BASE}${p}`;
-  return fetch(url, init);
+
+  // Get JWT token from sessionStorage
+  const token = sessionStorage.getItem("auth_session_token");
+
+  // Prepare headers
+  const headers = new Headers(init?.headers || {});
+
+  // Add authorization header if token exists
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  // Merge with existing init object
+  const finalInit: RequestInit = {
+    ...init,
+    headers,
+  };
+
+  return fetch(url, finalInit);
 }
 
 interface ApiResponse<T> {
