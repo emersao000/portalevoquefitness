@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, B
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from core.db import get_db, engine
-from auth0.validator import verify_auth0_token
 from ti.schemas.chamado import (
     ChamadoCreate,
     ChamadoOut,
@@ -33,25 +32,56 @@ from datetime import datetime, timedelta
 # UTILITY FUNCTIONS
 # ============================================================================
 
-def get_current_user_from_request(request: Request) -> dict | None:
+def get_current_user_from_request(request: Request, db: Session) -> User | None:
     """
-    Extrai o usuário do JWT token no header Authorization se disponível.
-    Retorna None se não houver token ou se a validação falhar.
+    Extrai o usuário da sessão armazenada no Azure.
+    Primeiro tenta usar o X-Session-Token (armazenado em Azure),
+    depois tenta JWT como fallback.
+    Retorna o objeto User se validado com sucesso.
     """
     try:
+        # Primeiro, tenta usar session token (mais seguro, armazenado em Azure)
+        session_token = request.headers.get("X-Session-Token")
+        if session_token:
+            try:
+                from ti.models.session import Session as SessionModel  # type: ignore
+                session = db.query(SessionModel).filter(
+                    (SessionModel.session_token == session_token) &
+                    (SessionModel.is_active == True)
+                ).first()
+
+                if session and not session.is_expired():
+                    user = db.query(User).filter(User.id == session.user_id).first()
+                    if user:
+                        print(f"[AUTH] ✅ Usuário validado via Azure session: {user.email}")
+                        return user
+            except Exception as e:
+                print(f"[AUTH] ⚠️  Erro ao validar session token: {e}")
+
+        # Fallback: tenta JWT token
         auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return None
+        if auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "").strip()
+            if token:
+                try:
+                    from auth0.validator import verify_auth0_token
+                    user_data = verify_auth0_token(token)
+                    if user_data and user_data.get("email"):
+                        # Tenta encontrar o usuário pelo email
+                        from sqlalchemy import func as sa_func
+                        user = db.query(User).filter(
+                            sa_func.lower(User.email) == user_data.get("email").lower()
+                        ).first()
+                        if user:
+                            print(f"[AUTH] ✅ Usuário validado via JWT token: {user.email}")
+                            return user
+                except Exception as e:
+                    print(f"[AUTH] ⚠️  Erro ao validar JWT token: {e}")
 
-        token = auth_header.replace("Bearer ", "").strip()
-        if not token:
-            return None
-
-        # Valida o token JWT
-        user_data = verify_auth0_token(token)
-        return user_data
+        print(f"[AUTH] ⚠️  Nenhum token de autenticação válido encontrado")
+        return None
     except Exception as e:
-        print(f"[AUTH] Erro ao extrair usuário do JWT: {e}")
+        print(f"[AUTH] ❌ Erro ao extrair usuário da requisição: {e}")
         return None
 
 # ============================================================================
@@ -925,12 +955,12 @@ def enviar_ticket(
         TicketAnexo.__table__.create(bind=engine, checkfirst=True)
         _ensure_column("ticket_anexos", "conteudo", "MEDIUMBLOB NULL")
 
-        # Se não foi fornecido author_email no formulário, tenta extrair do JWT token
+        # Se não foi fornecido author_email no formulário, tenta extrair da sessão Azure ou JWT
         if not autor_email:
-            current_user = get_current_user_from_request(request)
-            if current_user and current_user.get("email"):
-                autor_email = current_user.get("email")
-                print(f"[TICKET] 📧 Usando email do JWT token para ticket: {autor_email}")
+            current_user = get_current_user_from_request(request, db)
+            if current_user:
+                autor_email = current_user.email
+                print(f"[TICKET] 📧 Usando usuário da sessão Azure para ticket: {autor_email}")
 
         user_id = None
         if autor_email:
@@ -1276,12 +1306,14 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, request: Req
         autor_nome_str = None
         autor_email_str = (payload.autor_email or "").strip() or None
 
-        # Se não foi fornecido author_email no payload, tenta extrair do JWT token
+        # Se não foi fornecido author_email no payload, tenta extrair da sessão Azure ou JWT
         if not autor_email_str:
-            current_user = get_current_user_from_request(request)
-            if current_user and current_user.get("email"):
-                autor_email_str = current_user.get("email")
-                print(f"[HISTORICO STATUS] 📧 Usando email do JWT token: {autor_email_str}")
+            current_user = get_current_user_from_request(request, db)
+            if current_user:
+                autor_usuario_id = current_user.id
+                autor_email_str = current_user.email
+                autor_nome_str = f"{current_user.nome} {current_user.sobrenome}".strip()
+                print(f"[HISTORICO STATUS] 📧 Usando usuário da sessão Azure: {autor_email_str} ({autor_nome_str})")
 
         if autor_email_str:
             try:

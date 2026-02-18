@@ -14,15 +14,16 @@ export function apiFetch(path: string, init?: RequestInit) {
   const p = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_BASE}${p}`;
 
-  // Get JWT token from sessionStorage
-  const token = sessionStorage.getItem("auth_session_token");
+  // Get session token from sessionStorage (stored in Azure database)
+  const sessionToken = sessionStorage.getItem("auth_session_token");
 
   // Prepare headers
   const headers = new Headers(init?.headers || {});
 
-  // Add authorization header if token exists
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  // Add authorization header with session token if available
+  // Session token is validated against Azure database, more secure than JWT
+  if (sessionToken) {
+    headers.set("X-Session-Token", sessionToken);
   }
 
   // Merge with existing init object
